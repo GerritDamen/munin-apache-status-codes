@@ -1,34 +1,37 @@
 #!/bin/sh
 
-# If run with the "config"-parameter, give out information on how the
-# graphs should look.
+# If run with the "config"-parameter, give out information on how the graphs should look.
+# thanks to david campbell - https://github.com/dc2447
+#
+# cons:  logtail is needed for this script, and you need to make sure munin has write-access to $myaccesslog.offset.
+#        and you shouldn't use logrotate on your accesslog because of the .offset file.
+# pros:  not the last x lines are inspected, but everything since the last check, the logfile itself is just touched once.
+#        all statuscodes (i could possibly need) are displayed.
+# todos: support multiple vhost-logfiles.
 
-mystatuscodes="400 401 403 404 500 503 504"
-myloglines="10000"
+mystatuscodes="200 206 301 302 304 400 401 403 404 416 500 503 504"
 myaccesslog="/var/log/apache2/access.log"
 
 if [ "$1" = "config" ]; then
+  echo 'graph_title Apache Status Codes '
+  echo 'graph_category apache'
+  echo 'graph_args --base 1000 -l 0'
+  echo 'graph_vlabel rate'
+  echo 'graph_scale no'
 
-        echo 'graph_title Apache Error Rate '
-        echo 'graph_category apache'
+  for code in $mystatuscodes; do
+    echo "sc${code}.label ${code} Statuscode"
+  done
 
-        echo 'graph_args --base 1000 -l 0'
-        echo 'graph_vlabel rate'
-        echo 'graph_scale no'
-
-	for code in $mystatuscodes
-		do
-		echo "${code}.label ${code} Errors"
-	done
-
-        echo 'graph_info The number of apache errors in logs'
-        exit 0
+  echo 'graph_info The number of apache errors in logs'
+  exit 0
 fi
 
-        for code in $mystatuscodes
-                do
-		echo -n "${code}.value "
-		tail -${myloglines} ${myaccesslog} | awk '{print $9 }' | grep -c "${code}"
-        done
+allstatuscodes=`logtail ${myaccesslog} | cut -d " " -f 9`
+for code in $mystatuscodes; do
+  echo -n "sc${code}.value "
+  echo ${allstatuscodes} | grep -o "${code}" | wc -l
+done
 
 exit 0
+
