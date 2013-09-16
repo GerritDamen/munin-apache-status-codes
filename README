@@ -1,5 +1,1 @@
-Very basic Munin plugin to graph the rate of errors in Apache logfile.
-
-Plugin written in shell for portability.
-
-
+Basic Munin plugin to graph the rate of statuscodes in the Apache logfile.
